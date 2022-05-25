@@ -1,0 +1,125 @@
+from tkinter import *
+from functools import partial
+import progressbar
+from telethon import TelegramClient
+import xlsxwriter
+
+
+def Start_Settings(self):
+    self.title("Grabber for Telegram")  # Название окна
+
+    width = int(self.winfo_screenwidth() / 3.5)
+    height = int(self.winfo_screenheight() / 1.5)  # Создаем окно с размерами width и height
+    str_size = str(width) + "x" + str(height)
+    self.geometry(str_size)
+
+    point_x = int((self.winfo_screenwidth() - width) / 2)
+    point_y = int((self.winfo_screenheight() - height) / 2)  # Перемещаем окно в центр экрана
+    str_position = "+" + str(point_x) + "+" + str(point_y)
+    self.geometry(str_position)
+
+    self.resizable(width=False, height=False)
+
+
+def save_data(all_users_id, all_users_message):
+    workbook = xlsxwriter.Workbook('arrays.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    worksheet.write_column(0, 0, {"id:"})
+    for col, data in enumerate(all_users_id):
+        worksheet.write_column(0, col + 1, {data})
+
+    worksheet.write_column(1, 0, {"message:"})
+    for col, data in enumerate(all_users_message):
+        worksheet.write_column(1, col + 1, {data})
+
+    workbook.close()
+
+
+def Grabber(api_id, api_hash, url, vocabulary):
+
+    client = TelegramClient('session_name', api_id, api_hash)
+    client.start()
+
+    all_users_message = []  # сюда будем сохранять людей и их сообщения
+    all_users_id = []
+
+    i = 0
+    bar = progressbar.ProgressBar().start()  # для визуализации прогресса
+    for message in client.iter_messages(url, limit=5000):
+
+        abc = str(message.text)
+        if abc.find(vocabulary) != -1:  # ищем подстроку
+            bar.update(i)  # если нашли обновляем прогресс
+            i += 1
+
+            all_users_message.append(message.text)  # добавляем в список сообщение и id
+            all_users_id.append(message.sender_id)
+
+    save_data(all_users_id, all_users_message)
+
+
+def get_data(api_id, api_hash, url_text, voc_text):
+    url = url_text.get()
+    vocabulary = voc_text.get()
+    window.destroy()
+
+    Grabber(api_id, api_hash, url, vocabulary)
+
+
+def get_api(id_text, hash_text):
+    api_id = int(id_text.get())
+    api_hash = hash_text.get()
+
+    # url lable
+    url_lable = Label(window, font="TNR 12", text="Введите url чата/канала", width=20)
+    url_lable.place(x=90, y=275)
+
+    url_text = StringVar()
+    url_entry = Entry(window, justify=CENTER, width=30, textvariable=url_text)
+    url_entry.place(x=90, y=300)
+
+    # voc lable
+    voc_lable = Label(window, font="TNR 12", text="Введите ключевое слово", width=20)
+    voc_lable.place(x=90, y=325)
+
+    voc_text = StringVar()
+    voc_entry = Entry(window, justify=CENTER, width=30, textvariable=voc_text)
+    voc_entry.place(x=90, y=350)
+
+    enter_button = Button(window, text="Начать", width=6, height=6,
+                          command=partial(get_data, api_id, api_hash, url_text, voc_text))
+    enter_button.place(x=120, y=380, width=120, height=50)
+
+
+window = Tk()
+Start_Settings(window)
+
+# logo telegram
+telegram_logo = PhotoImage(file="telegram.png")
+telegram_lable = Label(image=telegram_logo)
+telegram_lable.place(x=85, y=50)
+
+# api id lable
+id_lable = Label(window, font="TNR 12", text="Введите api ID", width=20)
+id_lable.place(x=90, y=275)
+
+# api id entry
+id_text = IntVar()
+id_entry = Entry(window, justify=CENTER, width=30, textvariable=id_text)
+id_entry.place(x=90, y=300)
+
+# api hash lable
+hash_lable = Label(window, font="TNR 12", text="Введите api HASH", width=20)
+hash_lable.place(x=90, y=325)
+
+# api hash
+hash_text = StringVar()
+hash_entry = Entry(window, justify=CENTER, width=30, textvariable=hash_text)
+hash_entry.place(x=90, y=350)
+
+# button
+enter_button = Button(window, text="Далее", width=6, height=6, command=partial(get_api, id_text, hash_text))
+enter_button.place(x=120, y=380, width=120, height=50)
+
+window.mainloop()
